@@ -37,7 +37,7 @@
     <form method="GET" class="row mb-4">
         <div class="col-md-3">
             <select name="tipo_usuario" id="tipo_usuario" class="form-select" onchange="this.form.submit()">
-                <option value="">-- Seleccionar Tipo --</option>
+                <option value="">Seleccionar</option>
                 <option value="comprador" {{ request('tipo_usuario') == 'comprador' ? 'selected' : '' }}>Comprador</option>
                 <option value="visitante" {{ request('tipo_usuario') == 'visitante' ? 'selected' : '' }}>Visitante</option>
             </select>
@@ -46,7 +46,7 @@
         @if(request('tipo_usuario'))
             <div class="col-md-3">
                 <select name="filtro_por" class="form-select">
-                    <option value="">-- Filtrar por --</option>
+                    <option value="">Filtrar por</option>
                     <option value="correo" {{ request('filtro_por') == 'correo' ? 'selected' : '' }}>Correo</option>
                     <option value="documento" {{ request('filtro_por') == 'documento' ? 'selected' : '' }}>Documento</option>
                 </select>

@@ -89,7 +89,7 @@
 <body>
 
     <header class="container d-flex justify-content-between align-items-center">
-        <a href="{{ route('admin.login') }}" class="btn-admin">Administrador</a>
+        <!-- <a href="{{ route('admin.login') }}" class="btn-admin">Administrador</a> -->
         @if($evento)
         <h1 class="mx-auto text-center">{{ $evento->titulo ?? 'Título del evento' }}</h1>
         @endif
@@ -108,7 +108,7 @@
                 <p><strong>Lugar:</strong> {{ $evento->lugar ?? 'no hay lugar' }}</p>
                 <p><strong>Fecha:</strong> {{ $evento->fecha ?? 'No hay fecha' }}</p>
                 <p><strong>Hora:</strong> {{ $evento->hora ?? 'No hay hora' }}</p>
-                    <a href="{{ route('registro.formValidar') }}" class="btn-register">REGISTRARSE</a>
+                    <!-- <a href="{{ route('registro.formValidar') }}" class="btn-register">REGISTRARSE</a> -->
                 @else
                 <h2>Evento no disponible</h2>
                 <p>Lo sentimos, no hay información disponible sobre el evento en este momento.</p
