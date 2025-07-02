@@ -3,22 +3,23 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Models\Inscrito;
+use App\Models\Visitante;
+use App\Models\Comprador;
 use App\Models\Evento;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Validator;
-use Milon\Barcode\Facade\DNS1D;
+use Illuminate\Support\Facades\Mail;
+use Milon\Barcode\Facades\DNS1D;
 use Barryvdh\DomPDF\Facade\Pdf;
-
-
-
-
+use App\Mail\BuyerEntered;
 
 class InscripcionController extends Controller
 {
-    public function seleccionarTipo()
+    public function seleccionarTipo(Request $request)
     {
-        return view('inscripcion.seleccionar_tipo');
+        // Se asegura de que la variable documento esté presente (aunque sea null)
+        $documento = $request->input('documento') ?? '';
+        return view('inscripcion.seleccionar_tipo', compact('documento'));
     }
 
     public function mostrarFormulario(Request $request)
@@ -41,7 +42,6 @@ class InscripcionController extends Controller
     public function mostrarValidar()
     {
         $evento = Evento::latest()->first();
-
         if (!$evento) {
             return redirect()->route('inicio')->with('error', 'Actualmente no hay eventos disponibles para inscribirse.');
         }
@@ -60,23 +60,20 @@ class InscripcionController extends Controller
         }
 
         $documento = $request->numero_documento;
-        $inscrito = Inscrito::where('numero_documento', $documento)->first();
+        $visitante = Visitante::where('numero_documento', $documento)->first();
+        $comprador = Comprador::where('numero_documento', $documento)->first();
 
-        if ($inscrito) {
-            $pdfView = $inscrito->tipo_usuario === 'comprador' 
-                ? 'inscripcion.comprobante_comprador' 
-                : 'inscripcion.comprobante';
+        if ($visitante || $comprador) {
+            $inscrito = $visitante ?? $comprador;
+            $vista = $visitante ? 'pdf.comprobante_visitante' : 'pdf.comprobante_comprador';
 
-            $pdf = PDF::loadView($pdfView, compact('inscrito'));
+            $pdf = PDF::loadView($vista, ['inscrito' => $inscrito]);
             $pdfBase64 = base64_encode($pdf->output());
 
-            return view('inscripcion.registro_exitoso', [
-                'inscrito' => $inscrito,
-                'pdfBase64' => $pdfBase64
-            ]);
+            return view('inscripcion.registro_exitoso', compact('inscrito', 'pdfBase64'));
         }
 
-        // Si no existe, preguntar tipo de usuario
+        // Solución: pasar la variable $documento para evitar error
         return view('inscripcion.seleccionar_tipo', compact('documento'));
     }
 
@@ -87,96 +84,114 @@ class InscripcionController extends Controller
             return redirect()->route('inicio')->with('error', 'No hay evento activo para registrar.');
         }
 
-        $tipo = $request->input('tipo_usuario') ?? 'comprador';
+        $tipo = $request->input('tipo_usuario');
 
-        // Reglas comunes
-        $rules = [
+        $commonRules = [
             'nombre_completo'   => 'required|string|max:255',
-            'numero_documento'  => 'required|string|max:50|unique:inscritos',
-            'correo'            => 'required|email|unique:inscritos',
+            'numero_documento'  => 'required|string|max:50|unique:' . ($tipo === 'visitante' ? 'visitantes' : 'compradores') . ',numero_documento',
+            'correo'            => 'required|email|unique:' . ($tipo === 'visitante' ? 'visitantes' : 'compradores') . ',correo',
             'telefono'          => 'required|string|max:20',
             'fecha_registro'    => 'required|date',
         ];
 
         if ($tipo === 'visitante') {
-            $rules = array_merge($rules, [
+            $rules = array_merge($commonRules, [
                 'edad'   => 'required|integer|min:1|max:120',
                 'genero' => 'required|in:Masculino,Femenino,Otro',
+                'ciudad' => 'required|string|max:100',
             ]);
+
+            $validator = Validator::make($request->all(), $rules);
+            if ($validator->fails()) return redirect()->back()->withErrors($validator)->withInput();
+
+            $inscrito = new Visitante();
+            $inscrito->fill($request->only([
+                'nombre_completo', 'numero_documento', 'correo', 'telefono', 'fecha_registro', 'edad', 'genero', 'ciudad'
+            ]));
         }
 
         if ($tipo === 'comprador') {
-            $rules = array_merge($rules, [
+            $rules = array_merge($commonRules, [
                 'empresa'         => 'required|string|max:255',
                 'direccion'       => 'required|string|max:255',
                 'ciudad'          => 'required|string|max:255',
-                'redes_sociales'  => 'nullable|string|max:255',
                 'productos'       => 'nullable|array',
                 'segmento_edad'   => 'nullable|array',
             ]);
+
+            $validator = Validator::make($request->all(), $rules);
+            if ($validator->fails()) return redirect()->back()->withErrors($validator)->withInput();
+
+            $inscrito = new Comprador();
+            $inscrito->fill($request->only([
+                'nombre_completo', 'numero_documento', 'correo', 'telefono', 'fecha_registro', 'empresa', 'direccion', 'ciudad'
+            ]));
+            $inscrito->productos = json_encode($request->productos);
+            $inscrito->producto_otro = $request->producto_otro;
+            $inscrito->segmento_edad = json_encode($request->segmento_edad);
+            $inscrito->segmento_otro = $request->segmento_otro;
         }
 
-        $validator = Validator::make($request->all(), $rules);
-        if ($validator->fails()) {
-            return redirect()->back()->withErrors($validator)->withInput();
-        }
-
-        $inscrito = new Inscrito();
-        $inscrito->evento_id         = $evento->id;
-        $inscrito->nombre_completo   = $request->nombre_completo;
-        $inscrito->numero_documento  = $request->numero_documento;
-        $inscrito->correo            = $request->correo;
-        $inscrito->telefono          = $request->telefono;
-        $inscrito->fecha_registro    = $request->fecha_registro;
-        $inscrito->tipo_usuario      = $tipo;
+        $inscrito->evento_id = $evento->id;
         $inscrito->comprobante_token = Str::random(40);
-
-        if ($tipo === 'visitante') {
-            $inscrito->edad   = $request->edad;
-            $inscrito->genero = $request->genero;
-        }
-
-        if ($tipo === 'comprador') {
-            $inscrito->empresa         = $request->empresa;
-            $inscrito->direccion       = $request->direccion;
-            $inscrito->ciudad          = $request->ciudad;
-            $inscrito->redes_sociales  = $request->redes_sociales;
-            $inscrito->productos       = json_encode($request->productos);
-            $inscrito->producto_otro   = $request->producto_otro;
-            $inscrito->segmento_edad   = json_encode($request->segmento_edad);
-            $inscrito->segmento_otro   = $request->segmento_otro;
-        }
-
         $inscrito->save();
 
-        $pdfView = $tipo === 'comprador' 
-            ? 'inscripcion.comprobante_comprador' 
-            : 'inscripcion.comprobante';
-
-        $pdf = PDF::loadView($pdfView, compact('inscrito'));
+        $vista = $tipo === 'visitante' ? 'pdf.comprobante_visitante' : 'pdf.comprobante_comprador';
+        $pdf = PDF::loadView($vista, ['inscrito' => $inscrito]);
         $pdfBase64 = base64_encode($pdf->output());
 
-        return view('inscripcion.registro_exitoso', [
-            'inscrito' => $inscrito,
-            'pdfBase64' => $pdfBase64
-        ]);
+        // ✅ Mostrar la vista del comprobante (con botón "Registrar otra persona")
+        return view('inscripcion.registro_exitoso', compact('inscrito', 'pdfBase64'));
     }
 
-    public function verComprobanteAdmin($id)
-    {
-        $inscrito = Inscrito::findOrFail($id);
-        $pdf = PDF::loadView('pdf.inscrito', compact('inscrito'));
-        return $pdf->stream('comprobante_admin.pdf');
-    }
 
     public function verComprobanteEscaneado($id)
     {
-        $inscrito = Inscrito::find($id);
+        $visitante = Visitante::find($id);
+        $comprador = Comprador::find($id);
+        $inscrito = $visitante ?? $comprador;
 
-        if (!$inscrito) {
-            return abort(404, 'Inscripción no encontrada.');
+        if (!$inscrito) return abort(404, 'Inscripción no encontrada.');
+
+        $vista = $visitante ? 'pdf.comprobante_visitante' : 'pdf.comprobante_comprador';
+
+        $pdf = PDF::loadView($vista, ['inscrito' => $inscrito]);
+        return $pdf->stream('comprobante.pdf');
+    }
+
+    public function entrada(string $code)
+    {
+        $tipo = substr($code, 0, 3); // "VIS" o "COM"
+        $id = (int) substr($code, 3);
+
+        $persona = $tipo === 'COM' ? Comprador::find($id) : Visitante::find($id);
+
+        if (! $persona) {
+            return view('inscripcion.entrada', [
+                'status' => 'not_found',
+                'message' => 'No se encontró registro con ese código.'
+            ]);
         }
 
-        return view('inscripcion.comprobante', compact('inscrito'));
+        if ($persona->ingresado_at) {
+            return view('inscripcion.entrada', [
+                'status' => 'already',
+                'persona' => $persona,
+                'message' => 'Ya ha ingresado previamente.'
+            ]);
+        }
+
+        $persona->ingresado_at = now();
+        $persona->save();
+
+        if ($tipo === 'COM') {
+            Mail::to(config('mail.admin_address'))->send(new BuyerEntered($persona));
+        }
+
+        return view('inscripcion.entrada', [
+            'status' => 'ok',
+            'persona' => $persona,
+            'message' => '¡Entrada válida! Puede pasar.'
+        ]);
     }
 }

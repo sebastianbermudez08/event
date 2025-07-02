@@ -23,9 +23,15 @@ class Evento extends Model
         'imagen'
     ];
 
-    // Relación con los inscritos
-    public function inscritos()
+    // Relación con visitantes
+    public function visitantes()
     {
-        return $this->hasMany(Inscrito::class);
+        return $this->hasMany(Visitante::class);
+    }
+
+    // Relación con compradores
+    public function compradores()
+    {
+        return $this->hasMany(Comprador::class);
     }
 }

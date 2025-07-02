@@ -1,132 +1,150 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <title>Panel de Administración</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        .event-card {
-            background-color: {{ $evento->color_fondo ?? '#ffffff' }};
-            color: #333;
-            padding: 25px;
-            border-radius: 15px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.08);
-            margin-bottom: 30px;
-        }
-        .event-img {
-            max-width: 100%;
-            height: auto;
-            border-radius: 10px;
-        }
-    </style>
-</head>
-<body class="p-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2>Panel de Administración</h2>
-        <form method="POST" action="{{ route('admin.logout') }}">
-            @csrf
-            <button class="btn btn-danger">Cerrar sesión</button>
-        </form>
-    </div>
+@extends('layouts.admin')
 
-    {{-- Evento actual --}}
-    <div class="event-card">
+@section('content')
+<div class="container mt-5">
+
+    <h2 class="mb-3">
+        Panel de Administración - 
         @if($evento)
-            <h4>Evento Actual</h4>
-            <p><strong>Título:</strong> {{ $evento->titulo }}</p>
-            <p><strong>Descripción:</strong> {{ $evento->descripcion }}</p>
-            <p><strong>Lugar:</strong> {{ $evento->lugar }}</p>
-            <p><strong>Fecha:</strong> {{ $evento->fecha }}</p>
-            <p><strong>Hora:</strong> {{ $evento->hora }}</p>
+            {{ $evento->titulo }}
+        @else
+            Sin Evento Activo
+        @endif
+    </h2>
 
-            @if($evento->imagen)
-                <div>
-                    <img src="{{ asset('storage/' . $evento->imagen) }}" alt="Imagen evento" class="event-img">
-                </div>
-            @endif
+    {{-- BOTONES --}}
+    <div class="mb-4 d-flex flex-wrap gap-2">
+        @if(!$evento)
+            <a href="{{ route('admin.evento.editar', 0) }}" class="btn btn-success">
+                + Crear Nuevo Evento
+            </a>
+        @else
+            <a href="{{ route('admin.evento.editar', $evento->id) }}" class="btn btn-warning">
+                ✏️ Editar Evento Actual
+            </a>
 
-            <div class="mt-3">
-                <a href="{{ route('admin.evento.editar', $evento->id) }}" class="btn btn-warning">Editar Evento</a>
+            <a href="{{ route('registro.formulario', ['tipo' => 'comprador']) }}" class="btn btn-primary">
+                🛒 Registrar Comprador
+            </a>
+
+            <a href="{{ route('registro.formulario', ['tipo' => 'visitante']) }}" class="btn btn-info">
+                🙋 Registrar Visitante
+            </a>
+        @endif
+    </div>
+
+    {{-- FORMULARIO DE FILTRO --}}
+    <form method="GET" class="row mb-4">
+        <div class="col-md-3">
+            <select name="tipo_usuario" id="tipo_usuario" class="form-select" onchange="this.form.submit()">
+                <option value="">-- Seleccionar Tipo --</option>
+                <option value="comprador" {{ request('tipo_usuario') == 'comprador' ? 'selected' : '' }}>Comprador</option>
+                <option value="visitante" {{ request('tipo_usuario') == 'visitante' ? 'selected' : '' }}>Visitante</option>
+            </select>
+        </div>
+
+        @if(request('tipo_usuario'))
+            <div class="col-md-3">
+                <select name="filtro_por" class="form-select">
+                    <option value="">-- Filtrar por --</option>
+                    <option value="correo" {{ request('filtro_por') == 'correo' ? 'selected' : '' }}>Correo</option>
+                    <option value="documento" {{ request('filtro_por') == 'documento' ? 'selected' : '' }}>Documento</option>
+                </select>
             </div>
-        @else
-            <p>No hay evento registrado actualmente.</p>
-            <a href="{{ route('admin.evento.editar', 0) }}" class="btn btn-success mt-2">Crear Evento</a>
+            <div class="col-md-4">
+                <input type="text" name="valor" class="form-control" placeholder="Buscar..." value="{{ request('valor') }}">
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary w-100">Aplicar Filtro</button>
+            </div>
         @endif
-    </div>
+    </form>
 
-    {{-- Lista de inscritos --}}
-    <div>
-        <h5>Inscritos al Evento</h5>
+    {{-- COMPRADORES --}}
+    @if(request('tipo_usuario') == 'comprador' || !request('tipo_usuario'))
+    <h4>Compradores Registrados</h4>
+    <form method="POST" action="{{ route('admin.inscritos.eliminar_seleccionados') }}">
+        @csrf
+        @method('DELETE')
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th><input type="checkbox" onclick="toggleCheckboxes(this, 'comprador')"></th>
+                    <th>Nombre</th>
+                    <th>Empresa</th>
+                    <th>Correo</th>
+                    <th>Teléfono</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{-- Aquí recorres $compradores --}}
+                @forelse($compradores as $comprador)
+                    <tr>
+                        <td><input type="checkbox" name="seleccionados_comprador[]" value="{{ $comprador->id }}"></td>
+                        <td>{{ $comprador->nombre_completo }}</td>
+                        <td>{{ $comprador->empresa }}</td>
+                        <td>{{ $comprador->correo }}</td>
+                        <td>{{ $comprador->telefono }}</td>
+                        <td>
+                            <a href="{{ route('comprobante.ver', $comprador->id) }}" target="_blank" class="btn btn-sm btn-secondary">Ver</a>
+                        </td>
+                    </tr>
+                @empty
+                    <tr><td colspan="6">No hay compradores registrados.</td></tr>
+                @endforelse
+            </tbody>
+        </table>
+        <button type="submit" class="btn btn-danger">Eliminar Seleccionados</button>
+    </form>
+    @endif
 
-        @if($evento && count($inscritos) > 0)
-            {{-- Filtro --}}
-            <form method="GET" action="{{ route('admin.dashboard') }}" class="row g-2 mb-3">
-                <div class="col-md-3">
-                    <select name="filtro_por" class="form-select">
-                        <option value="">Filtrar por: </option>
-                        <option value="correo" {{ request('filtro_por') == 'correo' ? 'selected' : '' }}>Correo</option>
-                        <option value="documento" {{ request('filtro_por') == 'documento' ? 'selected' : '' }}>Documento</option>
-                    </select>
-                </div>
+    {{-- VISITANTES --}}
+    @if(request('tipo_usuario') == 'visitante' || !request('tipo_usuario'))
+    <h4 class="mt-5">Visitantes Registrados</h4>
+    <form method="POST" action="{{ route('admin.inscritos.eliminar_seleccionados') }}">
+        @csrf
+        @method('DELETE')
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th><input type="checkbox" onclick="toggleCheckboxes(this, 'visitante')"></th>
+                    <th>Nombre</th>
+                    <th>Edad</th>
+                    <th>Género</th>
+                    <th>Correo</th>
+                    <th>Teléfono</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{-- Aquí recorres $visitantes --}}
+                @forelse($visitantes as $visitante)
+                    <tr>
+                        <td><input type="checkbox" name="seleccionados_visitante[]" value="{{ $visitante->id }}"></td>
+                        <td>{{ $visitante->nombre_completo }}</td>
+                        <td>{{ $visitante->edad }}</td>
+                        <td>{{ $visitante->genero }}</td>
+                        <td>{{ $visitante->correo }}</td>
+                        <td>{{ $visitante->telefono }}</td>
+                        <td>
+                            <a href="{{ route('comprobante.ver', $visitante->id) }}" target="_blank" class="btn btn-sm btn-secondary">Ver</a>
+                        </td>
+                    </tr>
+                @empty
+                    <tr><td colspan="7">No hay visitantes registrados.</td></tr>
+                @endforelse
+            </tbody>
+        </table>
+        <button type="submit" class="btn btn-danger">Eliminar Seleccionados</button>
+    </form>
+    @endif
+</div>
 
-                <div class="col-md-5">
-                    <input type="text" name="valor" class="form-control" placeholder="Ingrese el valor a buscar" value="{{ request('valor') }}">
-                </div>
-
-                <div class="col-md-4 d-flex">
-                    <button type="submit" class="btn btn-primary me-2">Buscar</button>
-                    <a href="{{ route('admin.dashboard') }}" class="btn btn-secondary">Limpiar</a>
-                </div>
-            </form>
-
-            {{-- Tabla --}}
-            <form method="POST" action="{{ route('admin.inscritos.eliminar_seleccionados') }}">
-                @csrf
-                @method('DELETE')
-
-                <div class="mb-3">
-                    <button type="submit" class="btn btn-danger" onclick="return confirm('¿Estás seguro de eliminar los seleccionados?')">Eliminar</button>
-                <a href="{{ route('registro.formValidar') }}" class="btn-register">REGISTRARSE</a>
-                </div>
-
-                <table class="table table-striped">
-                    <thead>
-                        <tr>
-                            <th><input type="checkbox" id="checkAll"></th>
-                            <th>Nombre</th>
-                            <th>Documento</th>
-                            <th>Correo</th>
-                            <th>Fecha</th>
-                            <th>PDF</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach($inscritos as $i)
-                            <tr>
-                                <td><input type="checkbox" name="seleccionados[]" value="{{ $i->id }}"></td>
-                                <td>{{ $i->nombre_completo }}</td>
-                                <td>{{ $i->numero_documento }}</td>
-                                <td>{{ $i->correo }}</td>
-                                <td>{{ \Carbon\Carbon::parse($i->fecha_registro)->format('d/m/Y') }}</td>
-                                <td>
-                                    <a href="{{ route('admin.inscrito.pdf', $i->id) }}" target="_blank" class="btn btn-sm btn-outline-primary">Ver PDF</a>
-                                </td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-
-                {{ $inscritos->appends(request()->query())->links() }}
-            </form>
-        @else
-            <p>No hay inscritos para el evento actual.</p>
-        @endif
-    </div>
-
-    <script>
-        document.getElementById('checkAll')?.addEventListener('change', function () {
-            document.querySelectorAll('input[name="seleccionados[]"]').forEach(cb => cb.checked = this.checked);
-        });
-    </script>
-</body>
-</html>
+<script>
+    function toggleCheckboxes(source, tipo) {
+        const checkboxes = document.querySelectorAll(`input[name="seleccionados_${tipo}[]"]`);
+        checkboxes.forEach(cb => cb.checked = source.checked);
+    }
+</script>
+@endsection

@@ -7,18 +7,17 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use App\Models\User;
 use App\Models\Evento;
-use App\Models\Inscrito;
+use App\Models\Comprador;
+use App\Models\Visitante;
 use Barryvdh\DomPDF\Facade\Pdf;
 
 class AdminController extends Controller
 {
-    // Muestra formulario de login
     public function formLogin()
     {
         return view('admin.login');
     }
 
-    // Procesa el login
     public function login(Request $request)
     {
         $credentials = $request->only('email', 'password');
@@ -27,99 +26,101 @@ class AdminController extends Controller
             return redirect()->route('admin.dashboard');
         }
 
-        return back()->withErrors([
-            'email' => 'Credenciales incorrectas',
-        ]);
+        return back()->withErrors(['email' => 'Credenciales incorrectas']);
     }
 
-    // Cierra sesión
     public function logout(Request $request)
     {
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
-
         return redirect('/');
     }
 
-    // Muestra panel del administrador
     public function dashboard(Request $request)
     {
-        // Obtener último evento y contar inscritos
-        $evento = Evento::withCount('inscritos')->latest()->first();
+        $evento = Evento::latest()->first();
 
-        $query = Inscrito::query();
+        // Base queries
+        $compradores = Comprador::query();
+        $visitantes = Visitante::query();
 
         if ($evento) {
-            // Filtrar solo inscritos al evento actual
-            $query->where('evento_id', $evento->id);
+            $compradores->where('evento_id', $evento->id);
+            $visitantes->where('evento_id', $evento->id);
         }
 
-        // Filtros por correo o documento
+        // Filtros
         if ($request->filtro_por && $request->valor) {
             if ($request->filtro_por === 'correo') {
-                $query->where('correo', 'like', '%' . $request->valor . '%');
+                $compradores->where('correo', 'like', '%' . $request->valor . '%');
+                $visitantes->where('correo', 'like', '%' . $request->valor . '%');
             } elseif ($request->filtro_por === 'documento') {
-                $query->where('numero_documento', 'like', '%' . $request->valor . '%');
+                $compradores->where('numero_documento', 'like', '%' . $request->valor . '%');
+                $visitantes->where('numero_documento', 'like', '%' . $request->valor . '%');
             }
         }
 
-        $inscritos = $query->orderBy('fecha_registro', 'desc')->paginate(10);
+        // Obtener paginación
+        $compradores = $compradores->orderBy('fecha_registro', 'desc')->paginate(10, ['*'], 'compradores');
+        $visitantes  = $visitantes->orderBy('fecha_registro', 'desc')->paginate(10, ['*'], 'visitantes');
 
-        return view('admin.dashboard', compact('evento', 'inscritos'));
+        return view('admin.dashboard', compact('evento', 'compradores', 'visitantes'));
     }
 
-    // Formulario para crear o editar evento
     public function formEditarEvento($id)
     {
         $evento = $id == 0 ? null : Evento::findOrFail($id);
         return view('admin.evento_editar', compact('evento'));
     }
 
-    // Guardar evento (crear o actualizar)
     public function guardarEvento(Request $request)
     {
-        if ($request->filled('id')) {
-            $evento = Evento::findOrFail($request->id);
-        } else {
-            $evento = new Evento();
-        }
+        $evento = $request->filled('id') ? Evento::findOrFail($request->id) : new Evento();
 
         $evento->titulo = $request->titulo;
         $evento->descripcion = $request->descripcion;
         $evento->lugar = $request->lugar;
         $evento->fecha = $request->fecha;
         $evento->hora = $request->hora;
+        $evento->color_fondo = $request->color_fondo;
 
         if ($request->hasFile('imagen')) {
-            $path = $request->file('imagen')->store('eventos', 'public');
-            $evento->imagen = $path;
+            $evento->imagen = $request->file('imagen')->store('eventos', 'public');
         }
 
-        $evento->color_fondo = $request->color_fondo;
         $evento->save();
 
         return redirect()->route('admin.dashboard')->with('success', 'Evento guardado correctamente');
     }
 
-    // Eliminar múltiples inscritos
     public function eliminarSeleccionados(Request $request)
     {
         $ids = $request->input('seleccionados', []);
+        $tipo = $request->input('tipo');
 
-        if (empty($ids)) {
-            return redirect()->back()->with('error', 'No se seleccionó ningún registro para eliminar.');
+        if (empty($ids) || !$tipo) {
+            return redirect()->back()->with('error', 'Seleccione registros y especifique el tipo.');
         }
 
-        Inscrito::whereIn('id', $ids)->delete();
+        if ($tipo === 'comprador') {
+            Comprador::whereIn('id', $ids)->delete();
+        } elseif ($tipo === 'visitante') {
+            Visitante::whereIn('id', $ids)->delete();
+        }
 
         return redirect()->back()->with('success', 'Registros eliminados correctamente.');
     }
 
-    // Generar PDF individual
     public function generarPDF($id)
     {
-        $inscrito = Inscrito::findOrFail($id);
+        // Buscar en ambos modelos
+        $inscrito = Comprador::find($id) ?? Visitante::find($id);
+
+        if (!$inscrito) {
+            abort(404, 'Registro no encontrado');
+        }
+
         $pdf = Pdf::loadView('admin.pdf.inscrito', compact('inscrito'));
         return $pdf->stream('Inscrito_' . $inscrito->id . '.pdf');
     }
