@@ -23,11 +23,20 @@ class AdminController extends Controller
         $credentials = $request->only('email', 'password');
 
         if (Auth::attempt($credentials)) {
-            return redirect()->route('admin.dashboard');
+            $user = Auth::user();
+
+            if ($user->rol === 'admin' || $user->rol === 'registros') {
+                return redirect()->route('admin.dashboard');
+            }
+
+            if ($user->rol === 'ingresos') {
+                return redirect()->route('ingreso.index'); // Ruta que crearemos para el módulo de ingreso
+            }
         }
 
         return back()->withErrors(['email' => 'Credenciales incorrectas']);
     }
+
 
     public function logout(Request $request)
     {

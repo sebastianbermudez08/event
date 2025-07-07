@@ -164,34 +164,33 @@ class InscripcionController extends Controller
         $tipo = substr($code, 0, 3); // "VIS" o "COM"
         $id = (int) substr($code, 3);
 
-        $persona = $tipo === 'COM' ? Comprador::find($id) : Visitante::find($id);
+        if ($tipo === 'COM') {
+            $persona = Comprador::find($id);
+        } else {
+            $persona = Visitante::find($id);
+        }
 
         if (! $persona) {
-            return view('inscripcion.entrada', [
+            return view('ingreso.resultado', [
                 'status' => 'not_found',
                 'message' => 'No se encontró registro con ese código.'
             ]);
         }
 
-        if ($persona->ingresado_at) {
-            return view('inscripcion.entrada', [
-                'status' => 'already',
-                'persona' => $persona,
-                'message' => 'Ya ha ingresado previamente.'
-            ]);
-        }
-
+        // NO verificamos si ya ingresó. Siempre registramos
         $persona->ingresado_at = now();
         $persona->save();
 
+        // Si es comprador, enviar notificación
         if ($tipo === 'COM') {
-            Mail::to(config('mail.admin_address'))->send(new BuyerEntered($persona));
+            Mail::to(config('mail.admin_address'))->send(new \App\Mail\BuyerEntered($persona));
         }
 
-        return view('inscripcion.entrada', [
+        return view('ingreso.resultado', [
             'status' => 'ok',
             'persona' => $persona,
-            'message' => '¡Entrada válida! Puede pasar.'
+            'message' => '¡Entrada registrada correctamente!'
         ]);
     }
+
 }

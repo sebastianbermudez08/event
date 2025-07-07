@@ -4,7 +4,7 @@
 <div class="container mt-5">
 
     <h2 class="mb-3">
-        Panel de Administración - 
+        Panel de Administración -
         @if($evento)
             {{ $evento->titulo }}
         @else
@@ -14,23 +14,31 @@
 
     {{-- BOTONES --}}
     <div class="mb-4 d-flex flex-wrap gap-2">
-        @if(!$evento)
-            <a href="{{ route('admin.evento.editar', 0) }}" class="btn btn-success">
-                + Crear Nuevo Evento
-            </a>
-        @else
-            <a href="{{ route('admin.evento.editar', $evento->id) }}" class="btn btn-warning">
-                ✏️ Editar Evento Actual
-            </a>
+        @auth
+            @if(Auth::user()->rol === 'admin')
+                @if(!$evento)
+                    <a href="{{ route('admin.evento.editar', 0) }}" class="btn btn-success">
+                        + Crear Nuevo Evento
+                    </a>
+                @else
+                    <a href="{{ route('admin.evento.editar', $evento->id) }}" class="btn btn-warning">
+                        ✏️ Editar Evento Actual
+                    </a>
+                @endif
+            @endif
 
-            <a href="{{ route('registro.formulario', ['tipo' => 'comprador']) }}" class="btn btn-primary">
-                🛒 Registrar Comprador
-            </a>
+            @if(Auth::user()->rol === 'admin' || Auth::user()->rol === 'registros')
+                @if($evento)
+                    <a href="{{ route('registro.formulario', ['tipo' => 'comprador']) }}" class="btn btn-primary">
+                        🛒 Registrar Comprador
+                    </a>
 
-            <a href="{{ route('registro.formulario', ['tipo' => 'visitante']) }}" class="btn btn-info">
-                🙋 Registrar Visitante
-            </a>
-        @endif
+                    <a href="{{ route('registro.formulario', ['tipo' => 'visitante']) }}" class="btn btn-info">
+                        🙋 Registrar Visitante
+                    </a>
+                @endif
+            @endif
+        @endauth
     </div>
 
     {{-- FORMULARIO DE FILTRO --}}
@@ -78,7 +86,6 @@
                 </tr>
             </thead>
             <tbody>
-                {{-- Aquí recorres $compradores --}}
                 @forelse($compradores as $comprador)
                     <tr>
                         <td><input type="checkbox" name="seleccionados_comprador[]" value="{{ $comprador->id }}"></td>
@@ -118,7 +125,6 @@
                 </tr>
             </thead>
             <tbody>
-                {{-- Aquí recorres $visitantes --}}
                 @forelse($visitantes as $visitante)
                     <tr>
                         <td><input type="checkbox" name="seleccionados_visitante[]" value="{{ $visitante->id }}"></td>
@@ -139,6 +145,7 @@
         <button type="submit" class="btn btn-danger">Eliminar Seleccionados</button>
     </form>
     @endif
+
 </div>
 
 <script>

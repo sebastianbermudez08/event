@@ -13,14 +13,24 @@ class BuyerEntered extends Mailable
 
     public $comprador;
 
+    /**
+     * Create a new message instance.
+     *
+     * @param  \App\Models\Comprador  $comprador
+     */
     public function __construct(Comprador $comprador)
     {
         $this->comprador = $comprador;
     }
 
+    /**
+     * Build the message.
+     *
+     * @return $this
+     */
     public function build()
     {
-        return $this->subject("Entrada Comprador: {$this->comprador->nombre_completo}")
+        return $this->subject("Entrada del Comprador: {$this->comprador->nombre_completo}")
                     ->view('emails.buyer_entered');
     }
 }
