@@ -50,7 +50,6 @@ class AdminController extends Controller
     {
         $evento = Evento::latest()->first();
 
-        // Base queries
         $compradores = Comprador::query();
         $visitantes = Visitante::query();
 
@@ -59,7 +58,6 @@ class AdminController extends Controller
             $visitantes->where('evento_id', $evento->id);
         }
 
-        // Filtros
         if ($request->filtro_por && $request->valor) {
             if ($request->filtro_por === 'correo') {
                 $compradores->where('correo', 'like', '%' . $request->valor . '%');
@@ -70,7 +68,6 @@ class AdminController extends Controller
             }
         }
 
-        // Obtener paginación
         $compradores = $compradores->orderBy('fecha_registro', 'desc')->paginate(10, ['*'], 'compradores');
         $visitantes  = $visitantes->orderBy('fecha_registro', 'desc')->paginate(10, ['*'], 'visitantes');
 
@@ -130,7 +127,13 @@ class AdminController extends Controller
             abort(404, 'Registro no encontrado');
         }
 
-        $pdf = Pdf::loadView('admin.pdf.inscrito', compact('inscrito'));
+        // Usar la vista correcta según el tipo
+        $vista = $inscrito instanceof Comprador
+            ? 'comprobante_comprador'
+            : 'comprobante_visitante';
+
+        $pdf = Pdf::loadView($vista, ['inscrito' => $inscrito]);
+
         return $pdf->stream('Inscrito_' . $inscrito->id . '.pdf');
     }
 }
