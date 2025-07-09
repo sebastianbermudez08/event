@@ -36,6 +36,10 @@
 <body>
 
     <div class="info">
+        <br> 
+        @if (strlen ($inscrito->nombre_completo)<28)
+        <br>
+        @endif
         <strong>{{ strtoupper($inscrito->nombre_completo) }}</strong><br>
         {{ strtoupper($inscrito->empresa) }}<br>
         {{ strtoupper($inscrito->ciudad) }}<br>

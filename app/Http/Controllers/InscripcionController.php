@@ -17,7 +17,6 @@ class InscripcionController extends Controller
 {
     public function seleccionarTipo(Request $request)
     {
-        // Se asegura de que la variable documento esté presente (aunque sea null)
         $documento = $request->input('documento') ?? '';
         return view('inscripcion.seleccionar_tipo', compact('documento'));
     }
@@ -73,7 +72,6 @@ class InscripcionController extends Controller
             return view('inscripcion.registro_exitoso', compact('inscrito', 'pdfBase64'));
         }
 
-        // Solución: pasar la variable $documento para evitar error
         return view('inscripcion.seleccionar_tipo', compact('documento'));
     }
 
@@ -140,16 +138,68 @@ class InscripcionController extends Controller
         $pdf = PDF::loadView($vista, ['inscrito' => $inscrito]);
         $pdfBase64 = base64_encode($pdf->output());
 
-        // ✅ Mostrar la vista del comprobante (con botón "Registrar otra persona")
         return view('inscripcion.registro_exitoso', compact('inscrito', 'pdfBase64'));
     }
 
+    public function verComprobanteEscaneado($id)
+    {
+        $visitante = Visitante::find($id);
+        $comprador = Comprador::find($id);
+        $inscrito = $visitante ?? $comprador;
+
+        if (!$inscrito) return abort(404, 'Inscripción no encontrada.');
+
+        $vista = $visitante ? 'pdf.comprobante_visitante' : 'pdf.comprobante_comprador';
+        $pdf = PDF::loadView($vista, ['inscrito' => $inscrito]);
+        return $pdf->stream('comprobante.pdf');
+    }
+
+    public function entrada(string $code)
+    {
+        $tipo = strtoupper(substr($code, 0, 3));
+        $id = (int) substr($code, 3);
+
+        if ($tipo === 'COM') {
+            $persona = Comprador::find($id);
+        } elseif ($tipo === 'VIS') {
+            $persona = Visitante::find($id);
+        } else {
+            $persona = null;
+        }
+
+        if (!$persona) {
+            return view('ingreso.resultado', [
+                'status' => 'not_found',
+                'message' => 'No se encontró registro con ese código.'
+            ]);
+        }
+
+        $persona->ingresado_at = now();
+        $persona->save();
+
+        if ($tipo === 'COM') {
+            Mail::to(config('mail.admin_address'))->send(new BuyerEntered($persona));
+        }
+
+        return view('ingreso.resultado', [
+            'status' => 'ok',
+            'persona' => $persona,
+            'message' => '¡Entrada registrada correctamente!'
+        ]);
+    }
 
     public function procesarIngreso(Request $request)
     {
-        $code = $request->input('code');
+        $code = strtoupper($request->input('code'));
 
-        $tipo = substr($code, 0, 3); // "COM" o "VIS"
+        if (!preg_match('/^(COM|VIS)\d+$/', $code)) {
+            return redirect()->route('ingreso.index')->with([
+                'status' => 'not_found',
+                'message' => 'El código ingresado no tiene un formato válido.',
+            ]);
+        }
+
+        $tipo = substr($code, 0, 3);
         $id = (int) substr($code, 3);
 
         if ($tipo === 'COM') {
@@ -177,54 +227,5 @@ class InscripcionController extends Controller
             'persona' => $persona,
             'message' => '¡Entrada registrada correctamente!',
         ]);
-    }   
-
-    public function verComprobanteEscaneado($id)
-    {
-        $visitante = Visitante::find($id);
-        $comprador = Comprador::find($id);
-        $inscrito = $visitante ?? $comprador;
-
-        if (!$inscrito) return abort(404, 'Inscripción no encontrada.');
-
-        $vista = $visitante ? 'pdf.comprobante_visitante' : 'pdf.comprobante_comprador';
-
-        $pdf = PDF::loadView($vista, ['inscrito' => $inscrito]);
-        return $pdf->stream('comprobante.pdf');
     }
-
-    public function entrada(string $code)
-    {
-        $tipo = substr($code, 0, 3); // "VIS" o "COM"
-        $id = (int) substr($code, 3);
-
-        if ($tipo === 'COM') {
-            $persona = Comprador::find($id);
-        } else {
-            $persona = Visitante::find($id);
-        }
-
-        if (! $persona) {
-            return view('ingreso.resultado', [
-                'status' => 'not_found',
-                'message' => 'No se encontró registro con ese código.'
-            ]);
-        }
-
-        // NO verificamos si ya ingresó. Siempre registramos
-        $persona->ingresado_at = now();
-        $persona->save();
-
-        // Si es comprador, enviar notificación
-        if ($tipo === 'COM') {
-            Mail::to(config('mail.admin_address'))->send(new \App\Mail\BuyerEntered($persona));
-        }
-
-        return view('ingreso.resultado', [
-            'status' => 'ok',
-            'persona' => $persona,
-            'message' => '¡Entrada registrada correctamente!'
-        ]);
-    }
-
 }

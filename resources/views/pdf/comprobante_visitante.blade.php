@@ -9,57 +9,51 @@
             margin: 0;
         }
 
-        html, body {
-            margin: 0;
-            padding: 0;
+        body {
             width: 80mm;
             height: 45mm;
+            margin: 0;
+            padding: 0;
             font-family: Arial, sans-serif;
-        }
-
-        body {
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            text-align: center;
             font-size: 14px;
+            text-align: center;
         }
 
-        .info {
-            margin-bottom: 10px;
-            line-height: 1.2;
-        }
-
-        .barcode-wrapper {
+        .container {
+            height: 100%;
             display: flex;
             flex-direction: column;
+            justify-content: center;
             align-items: center;
-            justify-content: center;
         }
 
-        .barcode-wrapper .barcode {
-            display: flex;
-            justify-content: center;
-            margin-top: 5px;
+        .barcode-container {
+            display: inline-block;
+            margin-top: 8px;
         }
 
-        .barcode-wrapper .code {
-            font-size: 12px;
-            margin-top: 5px;
+        .code {
+            margin-top: 4px;
+            font-size: 13px;
+            letter-spacing: 1px;
+        }
+
+        strong {
+            font-size: 15px;
         }
     </style>
 </head>
 <body>
-    <div class="info">
-        <strong>{{ strtoupper($inscrito->nombre_completo) }}</strong><br>
-        {{ strtoupper($inscrito->ciudad) }}
-    </div>
+    <div class="container">
+        <br> <br>
+        <br> 
+        <div><strong>{{ strtoupper($inscrito->nombre_completo) }}</strong></div>
+        <div>{{ strtoupper($inscrito->ciudad) }}</div>
 
-    <div class="barcode-wrapper">
-        <div class="barcode">
-            {!! DNS1D::getBarcodeHTML('VIS' . $inscrito->id, 'C128', 1.5, 40) !!}
+        <div class="barcode-container">
+            {!! DNS1D::getBarcodeHTML('VIS' . $inscrito->id, 'C128', 2, 40) !!}
         </div>
+
         <div class="code">VIS{{ $inscrito->id }}</div>
     </div>
 </body>
