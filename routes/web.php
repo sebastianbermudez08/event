@@ -47,6 +47,7 @@ Route::middleware('auth')->group(function () {
 
     // Procesar ingreso desde el formulario
     Route::post('/ingreso/procesar', [InscripcionController::class, 'procesarIngreso'])->name('ingreso.process');
+    Route::post('/ingreso', [InscripcionController::class, 'procesarIngreso'])->name('ingreso.process');
 
     // Vista de ingreso para usuarios con rol 'ingresos'
     Route::get('/ingreso', function () {

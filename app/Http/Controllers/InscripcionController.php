@@ -145,6 +145,40 @@ class InscripcionController extends Controller
     }
 
 
+    public function procesarIngreso(Request $request)
+    {
+        $code = $request->input('code');
+
+        $tipo = substr($code, 0, 3); // "COM" o "VIS"
+        $id = (int) substr($code, 3);
+
+        if ($tipo === 'COM') {
+            $persona = Comprador::find($id);
+        } else {
+            $persona = Visitante::find($id);
+        }
+
+        if (!$persona) {
+            return redirect()->route('ingreso.index')->with([
+                'status' => 'not_found',
+                'message' => 'No se encontró registro con ese código.',
+            ]);
+        }
+
+        $persona->ingresado_at = now();
+        $persona->save();
+
+        if ($tipo === 'COM') {
+            Mail::to(config('mail.admin_address'))->send(new BuyerEntered($persona));
+        }
+
+        return redirect()->route('ingreso.index')->with([
+            'status' => 'ok',
+            'persona' => $persona,
+            'message' => '¡Entrada registrada correctamente!',
+        ]);
+    }   
+
     public function verComprobanteEscaneado($id)
     {
         $visitante = Visitante::find($id);
