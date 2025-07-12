@@ -12,6 +12,9 @@ use Illuminate\Support\Facades\Mail;
 use Milon\Barcode\Facades\DNS1D;
 use Barryvdh\DomPDF\Facade\Pdf;
 use App\Mail\BuyerEntered;
+use App\Mail\RegistroExitosoMail;
+use Illuminate\Support\Facades\Log;
+
 
 class InscripcionController extends Controller
 {
@@ -135,21 +138,36 @@ class InscripcionController extends Controller
         $inscrito->save();
 
         $vista = $tipo === 'visitante' ? 'pdf.comprobante_visitante' : 'pdf.comprobante_comprador';
+
+        // Enviar correo con comprobante en PDF
+        try {
+            Mail::to($inscrito->correo)->send(new RegistroExitosoMail($inscrito, $vista));
+        } catch (\Exception $e) {
+            Log::error('Error al enviar el correo de registro exitoso: ' . $e->getMessage());
+        }
+
         $pdf = PDF::loadView($vista, ['inscrito' => $inscrito]);
         $pdfBase64 = base64_encode($pdf->output());
 
         return view('inscripcion.registro_exitoso', compact('inscrito', 'pdfBase64'));
     }
 
-    public function verComprobanteEscaneado($id)
+    public function verComprobanteEscaneado($tipo, $id)
     {
-        $visitante = Visitante::find($id);
-        $comprador = Comprador::find($id);
-        $inscrito = $visitante ?? $comprador;
+        if ($tipo === 'comprador') {
+            $inscrito = Comprador::find($id);
+            $vista = 'pdf.comprobante_comprador';
+        } elseif ($tipo === 'visitante') {
+            $inscrito = Visitante::find($id);
+            $vista = 'pdf.comprobante_visitante';
+        } else {
+            return abort(404, 'Tipo no válido.');
+        }
 
-        if (!$inscrito) return abort(404, 'Inscripción no encontrada.');
+        if (!$inscrito) {
+            return abort(404, 'Inscripción no encontrada.');
+        }
 
-        $vista = $visitante ? 'pdf.comprobante_visitante' : 'pdf.comprobante_comprador';
         $pdf = PDF::loadView($vista, ['inscrito' => $inscrito]);
         return $pdf->stream('comprobante.pdf');
     }

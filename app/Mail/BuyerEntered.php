@@ -30,7 +30,9 @@ class BuyerEntered extends Mailable
      */
     public function build()
     {
-        return $this->subject("Entrada del Comprador: {$this->comprador->nombre_completo}")
-                    ->view('emails.buyer_entered');
+        return $this->subject('📥 Ingreso de Comprador Registrado')
+                    ->view('emails.buyer_entered')
+                    ->with(['comprador' => $this->comprador]);
     }
+
 }

@@ -22,7 +22,8 @@ Route::post('/registro/registrar', [InscripcionController::class, 'registrar'])-
 Route::get('/validar', [InscripcionController::class, 'mostrarValidar'])->name('registro.formValidar');
 Route::post('/validar', [InscripcionController::class, 'validar'])->name('inscripcion.validar');
 
-Route::get('/comprobante/{id}', [InscripcionController::class, 'verComprobanteEscaneado'])->name('comprobante.ver');
+//Route::get('/comprobante/{id}', [InscripcionController::class, 'verComprobanteEscaneado'])->name('comprobante.ver');
+Route::get('/comprobante/{tipo}/{id}', [InscripcionController::class, 'verComprobanteEscaneado'])->name('comprobante.ver');
 Route::get('/entrada/{code}', [InscripcionController::class, 'entrada'])->name('entrada.scan');
 
 Route::post('/descargar-comprobante', function (Request $request) {
@@ -55,6 +56,9 @@ Route::middleware('auth')->group(function () {
     })->name('ingreso.index');
 
     // Panel de administración
+    
+    Route::get('/login', [AdminController::class, 'formLogin'])->name('login');
+
     Route::get('/admin/dashboard', [AdminController::class, 'dashboard'])->name('admin.dashboard');
 
     Route::post('/admin/evento', [AdminController::class, 'guardarEvento'])->name('admin.evento.guardar');

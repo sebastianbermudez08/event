@@ -94,7 +94,10 @@
                         <td>{{ $comprador->correo }}</td>
                         <td>{{ $comprador->telefono }}</td>
                         <td>
-                            <a href="{{ route('comprobante.ver', $comprador->id) }}" target="_blank" class="btn btn-sm btn-secondary">Ver</a>
+                            <a href="{{ route('comprobante.ver', ['tipo' => 'comprador', 'id' => $comprador->id]) }}" class="btn btn-sm btn-secondary">
+                                📄 Ver comprobante
+                            </a>
+
                         </td>
                     </tr>
                 @empty
@@ -134,7 +137,10 @@
                         <td>{{ $visitante->correo }}</td>
                         <td>{{ $visitante->telefono }}</td>
                         <td>
-                            <a href="{{ route('comprobante.ver', $visitante->id) }}" target="_blank" class="btn btn-sm btn-secondary">Ver</a>
+                            <a href="{{ route('comprobante.ver', ['tipo' => 'visitante', 'id' => $visitante->id]) }}" class="btn btn-sm btn-secondary">
+                                 📄 Ver comprobante
+                                </a>
+
                         </td>
                     </tr>
                 @empty

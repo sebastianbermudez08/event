@@ -2,61 +2,49 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Ingreso de Comprador</title>
+    <title>Comprador ha ingresado</title>
     <style>
         body {
             font-family: Arial, sans-serif;
-            font-size: 14px;
-            line-height: 1.5;
-            background-color: #f9f9f9;
+            background-color: #f8f9fa;
             color: #333;
             padding: 20px;
         }
-
         .container {
-            background: #ffffff;
-            border-radius: 6px;
+            background-color: white;
+            border-radius: 8px;
             padding: 20px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.05);
             max-width: 600px;
-            margin: 0 auto;
+            margin: auto;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
         }
-
         h2 {
-            color: #2c3e50;
+            color: #007bff;
         }
-
-        ul {
-            padding-left: 20px;
+        p {
+            line-height: 1.6;
         }
-
-        li {
-            margin-bottom: 5px;
-        }
-
         .footer {
-            margin-top: 20px;
-            font-size: 12px;
-            color: #888;
+            margin-top: 30px;
+            font-size: 13px;
+            color: #666;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h2>Notificación de ingreso</h2>
-        <p>El comprador <strong>{{ $comprador->nombre_completo }}</strong> (ID: {{ $comprador->id }}) ha ingresado al evento.</p>
+<div class="container">
+    <h2>🔔 Ingreso Registrado</h2>
+    <p><strong>El comprador ha ingresado al evento.</strong></p>
 
-        <ul>
-            <li><strong>Empresa:</strong> {{ $comprador->empresa }}</li>
-            <li><strong>Ciudad:</strong> {{ $comprador->ciudad }}</li>
-            <li><strong>Correo:</strong> {{ $comprador->correo }}</li>
-            <li><strong>Teléfono:</strong> {{ $comprador->telefono }}</li>
-            <li><strong>Fecha y hora de ingreso:</strong> {{ \Carbon\Carbon::parse($comprador->ingresado_at)->format('d/m/Y H:i') }}</li>
-        </ul>
+    <p><strong>Nombre:</strong> {{ $comprador->nombre_completo }}</p>
+    <p><strong>Documento:</strong> {{ $comprador->numero_documento }}</p>
+    <p><strong>Correo:</strong> {{ $comprador->correo }}</p>
+    <p><strong>Teléfono:</strong> {{ $comprador->telefono }}</p>
+    <p><strong>Fecha y Hora de Ingreso:</strong> {{ \Carbon\Carbon::parse($comprador->ingresado_at)->format('d/m/Y H:i') }}</p>
 
-        <div class="footer">
-            Este mensaje fue generado automáticamente por el sistema de registro de eventos.
-        </div>
+    <div class="footer">
+        <p>Este mensaje fue enviado automáticamente por el sistema de eventos.</p>
     </div>
+</div>
 </body>
 </html>
