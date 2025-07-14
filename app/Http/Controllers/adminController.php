@@ -132,7 +132,8 @@ class AdminController extends Controller
             ? 'comprobante_comprador'
             : 'comprobante_visitante';
 
-        $pdf = Pdf::loadView($vista, ['inscrito' => $inscrito]);
+        $pdf = PDF::loadView($vista, ['inscrito' => $inscrito])
+          ->setPaper([0, 0, 170.08, 85.04], 'portrait'); // 60mm x 30mm en puntos (mm × 2.8346)
 
         return $pdf->stream('Inscrito_' . $inscrito->id . '.pdf');
     }

@@ -69,7 +69,8 @@ class InscripcionController extends Controller
             $inscrito = $visitante ?? $comprador;
             $vista = $visitante ? 'pdf.comprobante_visitante' : 'pdf.comprobante_comprador';
 
-            $pdf = PDF::loadView($vista, ['inscrito' => $inscrito]);
+            $pdf = PDF::loadView($vista, ['inscrito' => $inscrito])
+          ->setPaper([0, 0, 170.08, 85.04], 'portrait'); // 60mm x 30mm en puntos (mm × 2.8346)
             $pdfBase64 = base64_encode($pdf->output());
 
             return view('inscripcion.registro_exitoso', compact('inscrito', 'pdfBase64'));
@@ -146,7 +147,8 @@ class InscripcionController extends Controller
             Log::error('Error al enviar el correo de registro exitoso: ' . $e->getMessage());
         }
 
-        $pdf = PDF::loadView($vista, ['inscrito' => $inscrito]);
+        $pdf = PDF::loadView($vista, ['inscrito' => $inscrito])
+          ->setPaper([0, 0, 170.08, 85.04], 'portrait'); // 60mm x 30mm en puntos (mm × 2.8346)
         $pdfBase64 = base64_encode($pdf->output());
 
         return view('inscripcion.registro_exitoso', compact('inscrito', 'pdfBase64'));
@@ -168,7 +170,8 @@ class InscripcionController extends Controller
             return abort(404, 'Inscripción no encontrada.');
         }
 
-        $pdf = PDF::loadView($vista, ['inscrito' => $inscrito]);
+        $pdf = PDF::loadView($vista, ['inscrito' => $inscrito])
+          ->setPaper([0, 0, 170.08, 85.04], 'portrait'); // 60mm x 30mm en puntos (mm × 2.8346)
         return $pdf->stream('comprobante.pdf');
     }
 

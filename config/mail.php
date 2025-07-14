@@ -14,7 +14,7 @@ return [
     */
 
     'default' => env('MAIL_MAILER', 'smtp'),
-    'admin_address' => env('ADMIN_EMAIL', 'sebastianber12341@gmail.com, aceigraf@gmail.com'),
+    'admin_address' => env('ADMIN_EMAIL', 'aceigraf@gmail.com'),
 
     /*
     |--------------------------------------------------------------------------
