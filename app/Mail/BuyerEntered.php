@@ -5,34 +5,30 @@ namespace App\Mail;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Queue\SerializesModels;
-use App\Models\Comprador;
 
 class BuyerEntered extends Mailable
 {
     use Queueable, SerializesModels;
 
-    public $comprador;
+    public $persona;
 
     /**
      * Create a new message instance.
-     *
-     * @param  \App\Models\Comprador  $comprador
      */
-    public function __construct(Comprador $comprador)
+    public function __construct($persona)
     {
-        $this->comprador = $comprador;
+        $this->persona = $persona;
     }
 
     /**
      * Build the message.
-     *
-     * @return $this
      */
     public function build()
     {
-        return $this->subject('📥 Ingreso de Comprador Registrado')
-                    ->view('emails.buyer_entered')
-                    ->with(['comprador' => $this->comprador]);
+        return $this->view('emails.buyer_entered') // Asegúrate que esta vista existe
+                    ->subject('🚪 Comprador ha ingresado al evento')
+                    ->with([
+                        'persona' => $this->persona
+                    ]);
     }
-
 }

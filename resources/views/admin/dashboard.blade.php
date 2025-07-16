@@ -2,7 +2,6 @@
 
 @section('content')
 <div class="container mt-5">
-
     <h2 class="mb-3">
         Panel de Administración -
         @if($evento)
@@ -12,30 +11,28 @@
         @endif
     </h2>
 
+    {{-- TOTAL INSCRITOS --}}
+    <div class="alert alert-info">
+        <strong>Total de personas inscritas:</strong>
+        <span class="badge bg-success">{{ $totalInscritos }}</span>
+        &nbsp; ({{ $totalCompradores }} compradores, {{ $totalVisitantes }} visitantes)
+    </div>
+
     {{-- BOTONES --}}
     <div class="mb-4 d-flex flex-wrap gap-2">
         @auth
             @if(Auth::user()->rol === 'admin')
                 @if(!$evento)
-                    <a href="{{ route('admin.evento.editar', 0) }}" class="btn btn-success">
-                        + Crear Nuevo Evento
-                    </a>
+                    <a href="{{ route('admin.evento.editar', 0) }}" class="btn btn-success">+ Crear Nuevo Evento</a>
                 @else
-                    <a href="{{ route('admin.evento.editar', $evento->id) }}" class="btn btn-warning">
-                        ✏️ Editar Evento Actual
-                    </a>
+                    <a href="{{ route('admin.evento.editar', $evento->id) }}" class="btn btn-warning">✏️ Editar Evento Actual</a>
                 @endif
             @endif
 
             @if(Auth::user()->rol === 'admin' || Auth::user()->rol === 'registros')
                 @if($evento)
-                    <a href="{{ route('registro.formulario', ['tipo' => 'comprador']) }}" class="btn btn-primary">
-                        🛒 Registrar Comprador
-                    </a>
-
-                    <a href="{{ route('registro.formulario', ['tipo' => 'visitante']) }}" class="btn btn-info">
-                        🙋 Registrar Visitante
-                    </a>
+                    <a href="{{ route('registro.formulario', ['tipo' => 'comprador']) }}" class="btn btn-primary">🛒 Registrar Comprador</a>
+                    <a href="{{ route('registro.formulario', ['tipo' => 'visitante']) }}" class="btn btn-info">🙋 Registrar Visitante</a>
                 @endif
             @endif
         @endauth
@@ -70,94 +67,80 @@
 
     {{-- COMPRADORES --}}
     @if(request('tipo_usuario') == 'comprador' || !request('tipo_usuario'))
-    <h4>Compradores Registrados</h4>
-    <form method="POST" action="{{ route('admin.inscritos.eliminar_seleccionados') }}">
-        @csrf
-        @method('DELETE')
-        <table class="table table-bordered">
-            <thead>
-                <tr>
-                    <th><input type="checkbox" onclick="toggleCheckboxes(this, 'comprador')"></th>
-                    <th>Nombre</th>
-                    <th>Empresa</th>
-                    <th>Correo</th>
-                    <th>Teléfono</th>
-                    <th>Acciones</th>
-                </tr>
-            </thead>
-            <tbody>
-                @forelse($compradores as $comprador)
+        <h4>Compradores Registrados <span class="badge bg-primary">{{ $totalCompradores }}</span></h4>
+        <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+            <table class="table table-bordered table-striped">
+                <thead class="table-dark">
                     <tr>
-                        <td><input type="checkbox" name="seleccionados_comprador[]" value="{{ $comprador->id }}"></td>
-                        <td>{{ $comprador->nombre_completo }}</td>
-                        <td>{{ $comprador->empresa }}</td>
-                        <td>{{ $comprador->correo }}</td>
-                        <td>{{ $comprador->telefono }}</td>
-                        <td>
-                            <a href="{{ route('comprobante.ver', ['tipo' => 'comprador', 'id' => $comprador->id]) }}" class="btn btn-sm btn-secondary">
-                                📄 Ver comprobante
-                            </a>
-
-                        </td>
+                        <th>Nombre</th>
+                        <th>Empresa</th>
+                        <th>Correo</th>
+                        <th>Teléfono</th>
+                        <th>Acciones</th>
                     </tr>
-                @empty
-                    <tr><td colspan="6">No hay compradores registrados.</td></tr>
-                @endforelse
-            </tbody>
-        </table>
-        <button type="submit" class="btn btn-danger">Eliminar Seleccionados</button>
-    </form>
+                </thead>
+                <tbody>
+                    @forelse($compradores as $comprador)
+                        <tr>
+                            <td>{{ $comprador->nombre_completo }}</td>
+                            <td>{{ $comprador->empresa }}</td>
+                            <td>{{ $comprador->correo }}</td>
+                            <td>{{ $comprador->telefono }}</td>
+                            <td class="d-flex gap-1">
+                                <a href="{{ route('comprobante.ver', ['tipo' => 'comprador', 'id' => $comprador->id]) }}" class="btn btn-sm btn-secondary">📄</a>
+                                <form action="{{ route('admin.inscritos.eliminar_individual', ['tipo' => 'comprador', 'id' => $comprador->id]) }}" method="POST" onsubmit="return confirm('¿Eliminar este comprador?')">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="btn btn-sm btn-danger">🗑️</button>
+                                </form>
+                            </td>
+                        </tr>
+                    @empty
+                        <tr><td colspan="5">No hay compradores registrados.</td></tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
     @endif
 
     {{-- VISITANTES --}}
     @if(request('tipo_usuario') == 'visitante' || !request('tipo_usuario'))
-    <h4 class="mt-5">Visitantes Registrados</h4>
-    <form method="POST" action="{{ route('admin.inscritos.eliminar_seleccionados') }}">
-        @csrf
-        @method('DELETE')
-        <table class="table table-bordered">
-            <thead>
-                <tr>
-                    <th><input type="checkbox" onclick="toggleCheckboxes(this, 'visitante')"></th>
-                    <th>Nombre</th>
-                    <th>Edad</th>
-                    <th>Género</th>
-                    <th>Correo</th>
-                    <th>Teléfono</th>
-                    <th>Acciones</th>
-                </tr>
-            </thead>
-            <tbody>
-                @forelse($visitantes as $visitante)
+        <h4 class="mt-5">Visitantes Registrados <span class="badge bg-primary">{{ $totalVisitantes }}</span></h4>
+        <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+            <table class="table table-bordered table-striped">
+                <thead class="table-dark">
                     <tr>
-                        <td><input type="checkbox" name="seleccionados_visitante[]" value="{{ $visitante->id }}"></td>
-                        <td>{{ $visitante->nombre_completo }}</td>
-                        <td>{{ $visitante->edad }}</td>
-                        <td>{{ $visitante->genero }}</td>
-                        <td>{{ $visitante->correo }}</td>
-                        <td>{{ $visitante->telefono }}</td>
-                        <td>
-                            <a href="{{ route('comprobante.ver', ['tipo' => 'visitante', 'id' => $visitante->id]) }}" class="btn btn-sm btn-secondary">
-                                 📄 Ver comprobante
-                                </a>
-
-                        </td>
+                        <th>Nombre</th>
+                        <th>Edad</th>
+                        <th>Género</th>
+                        <th>Correo</th>
+                        <th>Teléfono</th>
+                        <th>Acciones</th>
                     </tr>
-                @empty
-                    <tr><td colspan="7">No hay visitantes registrados.</td></tr>
-                @endforelse
-            </tbody>
-        </table>
-        <button type="submit" class="btn btn-danger">Eliminar Seleccionados</button>
-    </form>
+                </thead>
+                <tbody>
+                    @forelse($visitantes as $visitante)
+                        <tr>
+                            <td>{{ $visitante->nombre_completo }}</td>
+                            <td>{{ $visitante->edad }}</td>
+                            <td>{{ $visitante->genero }}</td>
+                            <td>{{ $visitante->correo }}</td>
+                            <td>{{ $visitante->telefono }}</td>
+                            <td class="d-flex gap-1">
+                                <a href="{{ route('comprobante.ver', ['tipo' => 'visitante', 'id' => $visitante->id]) }}" class="btn btn-sm btn-secondary">📄</a>
+                                <form action="{{ route('admin.inscritos.eliminar_individual', ['tipo' => 'visitante', 'id' => $visitante->id]) }}" method="POST" onsubmit="return confirm('¿Eliminar este visitante?')">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="btn btn-sm btn-danger">🗑️</button>
+                                </form>
+                            </td>
+                        </tr>
+                    @empty
+                        <tr><td colspan="6">No hay visitantes registrados.</td></tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
     @endif
-
 </div>
-
-<script>
-    function toggleCheckboxes(source, tipo) {
-        const checkboxes = document.querySelectorAll(`input[name="seleccionados_${tipo}[]"]`);
-        checkboxes.forEach(cb => cb.checked = source.checked);
-    }
-</script>
 @endsection

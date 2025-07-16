@@ -68,11 +68,24 @@ class AdminController extends Controller
             }
         }
 
-        $compradores = $compradores->orderBy('fecha_registro', 'desc')->paginate(10, ['*'], 'compradores');
-        $visitantes  = $visitantes->orderBy('fecha_registro', 'desc')->paginate(10, ['*'], 'visitantes');
+        $compradores = $compradores->orderBy('fecha_registro', 'desc')->get();
+        $visitantes  = $visitantes->orderBy('fecha_registro', 'desc')->get();
 
-        return view('admin.dashboard', compact('evento', 'compradores', 'visitantes'));
+        // Contadores
+        $totalCompradores = $compradores->count();
+        $totalVisitantes  = $visitantes->count();
+        $totalInscritos   = $totalCompradores + $totalVisitantes;
+
+        return view('admin.dashboard', compact(
+            'evento',
+            'compradores',
+            'visitantes',
+            'totalCompradores',
+            'totalVisitantes',
+            'totalInscritos'
+        ));
     }
+
 
     public function formEditarEvento($id)
     {
@@ -100,23 +113,25 @@ class AdminController extends Controller
         return redirect()->route('admin.dashboard')->with('success', 'Evento guardado correctamente');
     }
 
-    public function eliminarSeleccionados(Request $request)
-    {
-        $ids = $request->input('seleccionados', []);
-        $tipo = $request->input('tipo');
-
-        if (empty($ids) || !$tipo) {
-            return redirect()->back()->with('error', 'Seleccione registros y especifique el tipo.');
-        }
-
-        if ($tipo === 'comprador') {
-            Comprador::whereIn('id', $ids)->delete();
-        } elseif ($tipo === 'visitante') {
-            Visitante::whereIn('id', $ids)->delete();
-        }
-
-        return redirect()->back()->with('success', 'Registros eliminados correctamente.');
+    public function eliminarIndividual($tipo, $id)
+{
+    if ($tipo === 'comprador') {
+        $inscrito = \App\Models\Comprador::find($id);
+    } elseif ($tipo === 'visitante') {
+        $inscrito = \App\Models\Visitante::find($id);
+    } else {
+        return redirect()->back()->with('error', 'Tipo no válido.');
     }
+
+    if (!$inscrito) {
+        return redirect()->back()->with('error', 'Inscrito no encontrado.');
+    }
+
+    $inscrito->delete();
+    return redirect()->back()->with('success', ucfirst($tipo) . ' eliminado correctamente.');
+}
+
+
 
     public function generarPDF($id)
     {

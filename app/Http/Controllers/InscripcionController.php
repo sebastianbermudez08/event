@@ -174,6 +174,25 @@ class InscripcionController extends Controller
           ->setPaper([0, 0, 170.08, 85.04], 'portrait'); // 60mm x 30mm en puntos (mm × 2.8346)
         return $pdf->stream('comprobante.pdf');
     }
+    public function eliminar($tipo, $id)
+    {
+        if ($tipo === 'visitante') {
+            $registro = Visitante::find($id);
+        } elseif ($tipo === 'comprador') {
+            $registro = Comprador::find($id);
+        } else {
+            return redirect()->back()->with('error', 'Tipo inválido.');
+        }
+
+        if (!$registro) {
+            return redirect()->back()->with('error', 'Registro no encontrado.');
+        }
+
+        $registro->delete();
+
+        return redirect()->back()->with('success', 'Registro eliminado correctamente.');
+    }
+
 
     public function entrada(string $code)
     {
